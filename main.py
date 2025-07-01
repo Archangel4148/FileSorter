@@ -1,10 +1,11 @@
 import os
 import sys
 
-from PyQt5.QtCore import QSettings
-from PyQt5.QtWidgets import QWidget, QApplication, QFileDialog, QTreeWidgetItem
+from PyQt5.QtCore import QSettings, QTimer
+from PyQt5.QtWidgets import QWidget, QApplication, QFileDialog, QTreeWidgetItem, QSizePolicy
 
 from file_browser_init import Ui_file_browser_window
+from file_preview.preview_widget import FilePreviewWidget
 
 
 class FileBrowserWindow(QWidget):
@@ -16,13 +17,27 @@ class FileBrowserWindow(QWidget):
         self.ui = Ui_file_browser_window()
         self.ui.setupUi(self)
 
-        # Load previous settings
+        # Create the custom preview widget
+        self.preview_widget = FilePreviewWidget()
+        self.ui.file_display_splitter.addWidget(self.preview_widget)
+        self.preview_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
+
+        # Load previous settings after UI finishes loading
         self.settings = QSettings("SimCorp", "FileSorter")
-        self.load_settings()
+        QTimer.singleShot(0, self.load_settings)
 
         # UI connections
         self.ui.open_browser_button.clicked.connect(self.open_root_directory_dialog)
-        self.ui.populate_button.clicked.connect(self.populate)
+        self.ui.file_tree_widget.itemSelectionChanged.connect(self.handle_selection_change)
+
+        self.preview_file_path: str = ""
+
+    def initialize_splitter(self, left_portion: float):
+        # Setup splitter (because it's stupid and bad)
+        total_width = self.ui.file_display_splitter.width()
+        left = int(total_width * left_portion)
+        right = total_width - left
+        self.ui.file_display_splitter.setSizes([left, right])
 
     def closeEvent(self, event):
         # Save settings on close
@@ -31,9 +46,17 @@ class FileBrowserWindow(QWidget):
 
     def load_settings(self):
         self.root_directory = self.settings.value("root_dir", "")
+        splitter_left_fraction = float(self.settings.value("splitter_left_fraction", "0.33"))
+        self.initialize_splitter(splitter_left_fraction)
 
     def save_settings(self):
+        # Save the root directory
         self.settings.setValue("root_dir", self.root_directory)
+
+        # Save the splitter orientation
+        splitter = self.ui.file_display_splitter
+        left_fraction = splitter.sizes()[0] / splitter.width()
+        self.settings.setValue("splitter_left_fraction", left_fraction)
 
     @property
     def root_directory(self):
@@ -42,6 +65,7 @@ class FileBrowserWindow(QWidget):
     @root_directory.setter
     def root_directory(self, path: str):
         self.ui.root_directory_line_edit.setText(path)
+        self.populate()
 
     def open_root_directory_dialog(self):
         # Open a file dialog to select a root directory
@@ -57,6 +81,23 @@ class FileBrowserWindow(QWidget):
         self.ui.file_tree_widget.clear()
         add_directory_contents_to_tree(self.root_directory, self.ui.file_tree_widget)
 
+    def handle_selection_change(self):
+        items = self.ui.file_tree_widget.selectedItems()
+        if items:
+            self.file_selected(items[0])
+
+    def get_full_path_from_item(self, item: QTreeWidgetItem) -> str:
+        parts = []
+        # Step back to the root path, recording folders along the way
+        while item is not None:
+            parts.insert(0, item.text(0))
+            item = item.parent()
+        return os.path.normpath(os.path.join(self.root_directory, *parts))
+
+    def file_selected(self, item: QTreeWidgetItem):
+        # Update the selected path, and send it to be previewed
+        self.preview_file_path = self.get_full_path_from_item(item)
+        self.preview_widget.preview(self.preview_file_path)
 
 def add_directory_contents_to_tree(path: str, parent_item: QTreeWidgetItem):
     for item in os.listdir(path):
