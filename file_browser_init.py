@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_file_browser_window(object):
     def setupUi(self, file_browser_window):
         file_browser_window.setObjectName("file_browser_window")
-        file_browser_window.resize(723, 598)
+        file_browser_window.resize(1025, 827)
         self.verticalLayout = QtWidgets.QVBoxLayout(file_browser_window)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()

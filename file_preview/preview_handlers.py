@@ -32,3 +32,21 @@ class FallbackPreviewHandler(PreviewHandler):
 
     def preview(self, path: str):
         self._widget.setText(f"No preview available for:\n{path}")
+
+
+class TextPreviewHandler(PreviewHandler):
+    def __init__(self):
+        self._widget = QLabel("")
+        self._widget.setWordWrap(True)
+        self._widget.setAlignment(Qt.AlignTop)
+
+    def can_handle(self, path: str) -> bool:
+        return path.endswith(".txt")
+
+    def widget(self) -> QWidget:
+        return self._widget
+
+    def preview(self, path: str):
+        with open(path, "r") as f:
+            content = f.read()
+        self._widget.setText(content)
