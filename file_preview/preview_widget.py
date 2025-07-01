@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QStackedLayout
 
-from file_preview.preview_handlers import FallbackPreviewHandler, TextPreviewHandler
+from file_preview.preview_handlers import FallbackPreviewHandler, TextPreviewHandler, ImagePreviewHandler, \
+    OpenCVVideoPreviewHandler
 
 
 class FilePreviewWidget(QWidget):
@@ -11,6 +12,8 @@ class FilePreviewWidget(QWidget):
 
         self.handlers = [
             TextPreviewHandler(),
+            ImagePreviewHandler(),
+            OpenCVVideoPreviewHandler(),
         ]
         self.fallback_handler = FallbackPreviewHandler()
         self._layout.addWidget(self.fallback_handler.widget())
