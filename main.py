@@ -79,7 +79,8 @@ class FileBrowserWindow(QWidget):
 
     def populate(self):
         self.ui.file_tree_widget.clear()
-        add_directory_contents_to_tree(self.root_directory, self.ui.file_tree_widget)
+        if self.root_directory:
+            add_directory_contents_to_tree(self.root_directory, self.ui.file_tree_widget)
 
     def handle_selection_change(self):
         items = self.ui.file_tree_widget.selectedItems()
@@ -100,15 +101,17 @@ class FileBrowserWindow(QWidget):
         self.preview_widget.preview(self.preview_file_path)
 
 def add_directory_contents_to_tree(path: str, parent_item: QTreeWidgetItem):
-    for item in os.listdir(path):
-        full_path = os.path.join(path, item)
-        # Add the item to the tree
-        tree_item = QTreeWidgetItem(parent_item)
-        tree_item.setText(0, item)
-        # If the item is a directory, recurse into it
-        if os.path.isdir(full_path):
-            add_directory_contents_to_tree(full_path, tree_item)
-
+    try:
+        for item in os.listdir(path):
+            full_path = os.path.join(path, item)
+            # Add the item to the tree
+            tree_item = QTreeWidgetItem(parent_item)
+            tree_item.setText(0, item)
+            # If the item is a directory, recurse into it
+            if os.path.isdir(full_path):
+                add_directory_contents_to_tree(full_path, tree_item)
+    except PermissionError:
+        return
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

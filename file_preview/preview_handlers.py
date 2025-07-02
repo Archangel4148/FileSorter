@@ -1,3 +1,4 @@
+import zipfile
 from abc import abstractmethod, ABC
 
 import cv2
@@ -54,7 +55,7 @@ class TextPreviewHandler(PreviewHandler):
         return self._widget
 
     def preview(self, path: str):
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
         self._widget.setText(content)
 
@@ -142,3 +143,37 @@ class OpenCVVideoPreviewHandler(PreviewHandler):
         self._label.setPixmap(pix)
 
         self._frame_count += 1
+
+
+class ZipPreviewHandler(PreviewHandler):
+    def __init__(self):
+        super().__init__()
+        self.supported_extensions = [
+            ".zip"
+        ]
+        # Use a QTextEdit for text display
+        self._widget = QTextEdit()
+        self._widget.setReadOnly(True)
+
+    def widget(self) -> QWidget:
+        return self._widget
+
+    def preview(self, path: str):
+        content = f"Unable to preview compressed file: {path}"
+        try:
+            with zipfile.ZipFile(path, "r") as zf:
+                lines = ["Contents of ZIP archive:\n",
+                         f"{'Filename':<50} {'Size (bytes)':>15} {'Compressed':>15} {'Ratio':>8}", "-" * 92]
+                for info in zf.infolist():
+                    name = info.filename
+                    size = info.file_size
+                    compressed_size = info.compress_size
+                    ratio = (compressed_size / size * 100) if size > 0 else 0
+                    lines.append(f"{name:<50.50} {size:>15,} {compressed_size:>15,} {ratio:>7.1f}%")
+                content = "\n".join(lines)
+        except zipfile.BadZipFile:
+            content = "Unable to read ZIP archive."
+        except Exception as e:
+            content = f"Error loading ZIP file:\n{e}"
+
+        self._widget.setText(content)
